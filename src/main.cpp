@@ -1,5 +1,6 @@
-#include "SDL3/SDL_rect.h"
-#include "SDL3/SDL_render.h"
+#include "SDL3/SDL_stdinc.h"
+#include <cstdlib>
+#include <iterator>
 #define SDL_MAIN_USE_CALLBACKS
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_main.h>
@@ -31,6 +32,10 @@ struct App {
     Eval AnimatedEval;
     float Speed;
 
+    double TimeSinceLastPress;
+    double AdjustmentTimer;
+    bool CanAdjust;
+
     bool DisplayFPS;
 };
 
@@ -38,6 +43,36 @@ void CalculateDeltaTime(App *app) {
     u64 currentTicks = SDL_GetTicksNS();
     app->Delta = (currentTicks - app->PreviousTicks) / 1e9;
     app->PreviousTicks = currentTicks;
+}
+
+void SetEval01(App *app, float new01) {
+    new01 = SDL_clamp(new01, 0, 1);
+    app->TrueEval.Eval01 = new01;
+    app->Speed = SDL_fabsf(app->TrueEval.Eval01 - app->AnimatedEval.Eval01);
+    app->TrueEval.Eval = (app->TrueEval.Eval01 - 0.5f) * 2 * MAX_SCORE;
+}
+
+void ResetAdjustmentTime(App *app) {
+    app->CanAdjust = true;
+
+    app->TimeSinceLastPress = 0;
+
+    float nextTime = 2 * SDL_randf();
+    app->AdjustmentTimer = nextTime;
+}
+
+void HandleAdjustment(App *app) {
+    if (!app->CanAdjust) return;
+    app->TimeSinceLastPress += app->Delta;
+    app->AdjustmentTimer -= app->Delta;
+
+    if (app->TimeSinceLastPress >= MAX_ADJUSTMENT_TIME) return;
+    if (app->AdjustmentTimer <= 0) {
+        float factor = ((MAX_ADJUSTMENT_TIME - app->TimeSinceLastPress) / MAX_ADJUSTMENT_TIME);
+        SetEval01(app, app->TrueEval.Eval01 + ((SDL_randf() * 2) - 1) * factor * 0.05f);
+        float nextTime = SDL_min(app->TimeSinceLastPress * SDL_randf(), 0.75f);
+        app->AdjustmentTimer = nextTime;
+    }
 }
 
 SDL_AppResult SDL_AppInit(void **appstate, int argc, char **argv) {
@@ -92,6 +127,7 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char **argv) {
     SDL_Log("Initializing game data");
     app->TrueEval.Eval01 = 0.5f;
     app->AnimatedEval.Eval01 = 0.5f;
+    app->TimeSinceLastPress = MAXFLOAT;
     
     SDL_Log("Welcome to ces!");
     return SDL_APP_CONTINUE;
@@ -100,6 +136,7 @@ SDL_AppResult SDL_AppIterate(void *appstate) {
     App* app = (App*)appstate;
 
     CalculateDeltaTime(app);
+    HandleAdjustment(app);
 
     app->AnimatedEval.Eval01 = MoveTowards(app->AnimatedEval.Eval01, app->TrueEval.Eval01, app->Speed * app->Delta);
 
@@ -186,52 +223,58 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event) {
         } break;
         case SDL_EVENT_KEY_DOWN:
         {
-            float previousEval = app->TrueEval.Eval01;
             switch (event->key.scancode) {
                 case SDL_SCANCODE_1:
-                    app->TrueEval.Eval01 = 0;
+                    ResetAdjustmentTime(app);
+                    SetEval01(app, 0);
                     break;
                 case SDL_SCANCODE_2:
-                    app->TrueEval.Eval01 = 1.0f/9;
+                    ResetAdjustmentTime(app);
+                    SetEval01(app, 1.0f/9);
                     break;
                 case SDL_SCANCODE_3:
-                    app->TrueEval.Eval01 = 2.0f/9;
+                    ResetAdjustmentTime(app);
+                    SetEval01(app, 2.0f/9);
                     break;
                 case SDL_SCANCODE_4:
-                    app->TrueEval.Eval01 = 3.0f/9;
+                    ResetAdjustmentTime(app);
+                    SetEval01(app, 3.0f/9);
                     break;
                 case SDL_SCANCODE_5:
-                    app->TrueEval.Eval01 = 4.0f/9;
+                    ResetAdjustmentTime(app);
+                    SetEval01(app, 4.0f/9);
                     break;
                 case SDL_SCANCODE_6:
-                    app->TrueEval.Eval01 = 5.0f/9;
+                    ResetAdjustmentTime(app);
+                    SetEval01(app, 5.0f/9);
                     break;
                 case SDL_SCANCODE_7:
-                    app->TrueEval.Eval01 = 6.0f/9;
+                    ResetAdjustmentTime(app);
+                    SetEval01(app, 6.0f/9);
                     break;
                 case SDL_SCANCODE_8:
-                    app->TrueEval.Eval01 = 7.0f/9;
+                    ResetAdjustmentTime(app);
+                    SetEval01(app, 7.0f/9);
                     break;
                 case SDL_SCANCODE_9:
-                    app->TrueEval.Eval01 = 8.0f/9;
+                    ResetAdjustmentTime(app);
+                    SetEval01(app, 8.0f/9);
                     break;
                 case SDL_SCANCODE_0:
-                    app->TrueEval.Eval01 = 1;
+                    ResetAdjustmentTime(app);
+                    SetEval01(app, 1);
                     break;
                 case SDL_SCANCODE_EQUALS:
-                    app->TrueEval.Eval01 = 0.5f;
+                    app->CanAdjust = false;
+                    SetEval01(app, 0.5f);
                     break;
                 case SDL_SCANCODE_F: 
                     app->DisplayFPS = !app->DisplayFPS;
                     break;
                 default: break;
             }
-            app->Speed = SDL_fabsf(app->TrueEval.Eval01 - app->AnimatedEval.Eval01);
-            app->TrueEval.Eval = (app->TrueEval.Eval01 - 0.5f) * 2 * MAX_SCORE;
         }
-
     }
     return SDL_APP_CONTINUE;
 }
 void SDL_AppQuit(void *appstate, SDL_AppResult result) {}
-
