@@ -6,6 +6,13 @@
 #include <cmath>
 
 #include "ces_config.h"
+#include "typedefs.h"
+#include "lemath.h"
+
+struct Eval {
+    float Eval;
+    float Eval01;
+};
 
 struct App {
     SDL_Window *Window;
@@ -14,9 +21,20 @@ struct App {
     TTF_TextEngine *TextEngine;
     TTF_Font *RegularFont;
     TTF_Font *ItalicFont;
-    float Eval;
-    float Eval01;
+
+    double Delta;
+    u64 PreviousTicks;
+
+    Eval TrueEval;
+    Eval AnimatedEval;
+    float Speed;
 };
+
+void CalculateDeltaTime(App *app) {
+    u64 currentTicks = SDL_GetTicksNS();
+    app->Delta = (currentTicks - app->PreviousTicks) / 1e9;
+    app->PreviousTicks = currentTicks;
+}
 
 SDL_AppResult SDL_AppInit(void **appstate, int argc, char **argv) {
     SDL_Log("Initializing SDL...");
@@ -56,48 +74,53 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char **argv) {
         SDL_LogError(SDL_LOG_CATEGORY_ERROR, "Failed to initialize the text engine: %s", SDL_GetError());
         return SDL_APP_FAILURE;
     }
-    app->RegularFont = TTF_OpenFont(FONT_REGULAR_PATH, 24);
+    app->RegularFont = TTF_OpenFont(FONT_REGULAR_PATH, FONT_SIZE);
     if (app->RegularFont == nullptr) {
         SDL_LogError(SDL_LOG_CATEGORY_ERROR, "Failed to open font: %s", SDL_GetError());
         return SDL_APP_FAILURE;
     }
-    app->ItalicFont = TTF_OpenFont(FONT_ITALIC_PATH, 24);
+    app->ItalicFont = TTF_OpenFont(FONT_ITALIC_PATH, FONT_SIZE);
     if (app->ItalicFont == nullptr) {
         SDL_LogError(SDL_LOG_CATEGORY_ERROR, "Failed to open font: %s", SDL_GetError());
         return SDL_APP_FAILURE;
     }
 
     SDL_Log("Initializing game data");
-    app->Eval01 = 0.5f;
+    app->TrueEval.Eval01 = 0.5f;
+    app->AnimatedEval.Eval01 = 0.5f;
 
     SDL_Log("Welcome to ces!");
     return SDL_APP_CONTINUE;
 }
 SDL_AppResult SDL_AppIterate(void *appstate) {
     App* app = (App*)appstate;
+
+    CalculateDeltaTime(app);
+
+    app->AnimatedEval.Eval01 = MoveTowards(app->AnimatedEval.Eval01, app->TrueEval.Eval01, app->Speed * app->Delta);
+
     SDL_SetRenderDrawColor(app->Renderer, BLACK.r, BLACK.g, BLACK.b, BLACK.a);
     SDL_RenderClear(app->Renderer);
 
     SDL_SetRenderDrawColor(app->Renderer, WHITE.r, WHITE.g, WHITE.b, WHITE.a);
     int windowWidth, windowHeight;
     SDL_GetWindowSize(app->Window, &windowWidth, &windowHeight);
-    float y = std::lerp((float)windowHeight, 0, app->Eval01);
+    float y = std::lerp((float)windowHeight, 0, app->AnimatedEval.Eval01);
     SDL_FRect white { 0,y,(float)windowWidth,(float)windowHeight };
     SDL_RenderFillRect(app->Renderer, &white);
 
-    if (app->Eval01 >= 0.5f) {
+    if (app->TrueEval.Eval01 >= 0.5f) {
         int windowWidth, windowHeight;
         SDL_GetWindowSize(app->Window, &windowWidth, &windowHeight);
 
         char rawText[6]; // +xx.x\0
-        SDL_snprintf(rawText, sizeof(rawText), "+%.1f", app->Eval);
+        SDL_snprintf(rawText, sizeof(rawText), "+%.1f", app->TrueEval.Eval);
         TTF_Text *text = TTF_CreateText(app->TextEngine, app->RegularFont, rawText , 0);
         TTF_SetTextColor(text, BLACK.r, BLACK.g, BLACK.g, BLACK.a);
         int textWidth;
-        size_t textHeight;
-        TTF_MeasureString(app->RegularFont, rawText, 0, 0, &textWidth, &textHeight);
+        TTF_MeasureString(app->RegularFont, rawText, 0, 0, &textWidth, nullptr);
         float x = ((float)windowWidth / 2)-((float)textWidth / 2);
-        float y = windowHeight- 40;
+        float y = windowHeight - FONT_SIZE - 10;
         if (!TTF_DrawRendererText(text, x, y)) {
             SDL_Log("%s", SDL_GetError());
         }
@@ -107,14 +130,13 @@ SDL_AppResult SDL_AppIterate(void *appstate) {
         SDL_GetWindowSize(app->Window, &windowWidth, &windowHeight);
 
         char rawText[6]; // -xx.x\0
-        SDL_snprintf(rawText, sizeof(rawText), "%.1f", app->Eval);
+        SDL_snprintf(rawText, sizeof(rawText), "%.1f", app->TrueEval.Eval);
         TTF_Text *text = TTF_CreateText(app->TextEngine, app->RegularFont, rawText , 0);
         TTF_SetTextColor(text, WHITE.r, WHITE.g, WHITE.g, WHITE.a);
         int textWidth;
-        size_t textHeight;
-        TTF_MeasureString(app->RegularFont, rawText, 0, 0, &textWidth, &textHeight);
+        TTF_MeasureString(app->RegularFont, rawText, 0, 0, &textWidth, nullptr);
         float x = ((float)windowWidth / 2)-((float)textWidth / 2);
-        float y = 40;
+        float y = 10;
         if (!TTF_DrawRendererText(text, x, y)) {
             SDL_Log("%s", SDL_GetError());
         }
@@ -134,43 +156,45 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event) {
         } break;
         case SDL_EVENT_KEY_DOWN:
         {
+            float previousEval = app->TrueEval.Eval01;
             switch (event->key.scancode) {
                 case SDL_SCANCODE_1:
-                    app->Eval01 = 0;
+                    app->TrueEval.Eval01 = 0;
                     break;
                 case SDL_SCANCODE_2:
-                    app->Eval01 = 1.0f/9;
+                    app->TrueEval.Eval01 = 1.0f/9;
                     break;
                 case SDL_SCANCODE_3:
-                    app->Eval01 = 2.0f/9;
+                    app->TrueEval.Eval01 = 2.0f/9;
                     break;
                 case SDL_SCANCODE_4:
-                    app->Eval01 = 3.0f/9;
+                    app->TrueEval.Eval01 = 3.0f/9;
                     break;
                 case SDL_SCANCODE_5:
-                    app->Eval01 = 4.0f/9;
+                    app->TrueEval.Eval01 = 4.0f/9;
                     break;
                 case SDL_SCANCODE_6:
-                    app->Eval01 = 5.0f/9;
+                    app->TrueEval.Eval01 = 5.0f/9;
                     break;
                 case SDL_SCANCODE_7:
-                    app->Eval01 = 6.0f/9;
+                    app->TrueEval.Eval01 = 6.0f/9;
                     break;
                 case SDL_SCANCODE_8:
-                    app->Eval01 = 7.0f/9;
+                    app->TrueEval.Eval01 = 7.0f/9;
                     break;
                 case SDL_SCANCODE_9:
-                    app->Eval01 = 8.0f/9;
+                    app->TrueEval.Eval01 = 8.0f/9;
                     break;
                 case SDL_SCANCODE_0:
-                    app->Eval01 = 1;
+                    app->TrueEval.Eval01 = 1;
                     break;
                 case SDL_SCANCODE_EQUALS:
-                    app->Eval01 = 0.5f;
+                    app->TrueEval.Eval01 = 0.5f;
                     break;
                 default: break;
             }
-            app->Eval = (app->Eval01 - 0.5f) * 2 * MAX_SCORE;
+            app->Speed = SDL_fabsf(app->TrueEval.Eval01 - previousEval);
+            app->TrueEval.Eval = (app->TrueEval.Eval01 - 0.5f) * 2 * MAX_SCORE;
         }
 
     }
