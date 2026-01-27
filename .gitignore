@@ -2,3 +2,4 @@
 build/*
 deps/*
 !deps/CMakeLists.txt
+.DS_Store
