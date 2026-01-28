@@ -34,13 +34,23 @@ struct App {
 
     Eval TrueEval;
     Eval AnimatedEval;
+    bool IsCheckmate;
+    int CheckmateMoves;
     float Speed;
 
     double TimeSinceLastPress;
     double AdjustmentTimer;
     bool CanAdjust;
 
+    bool IsWhiteModDown;
+    bool IsBlackModDown;
+
     bool DisplayFPS;
+};
+
+enum Side {
+    Black,
+    White
 };
 
 SDL_HitTestResult SDLCALL WindowHit(SDL_Window *window, const SDL_Point *area, void *data) {
@@ -87,6 +97,17 @@ void SetEval01(App *app, float new01) {
     app->TrueEval.Eval01 = new01;
     app->Speed = SDL_fabsf(app->TrueEval.Eval01 - app->AnimatedEval.Eval01);
     app->TrueEval.Eval = (app->TrueEval.Eval01 - 0.5f) * 2 * MAX_SCORE;
+}
+
+void SetCheckmate(App *app, Side side, int moves) {
+    app->CanAdjust = false;
+    app->IsCheckmate = true;
+    app->CheckmateMoves = moves;
+    if (side == Side::White) {
+        SetEval01(app, 1);
+    } else {
+        SetEval01(app, 0);
+    }
 }
 
 void ResetAdjustmentTime(App *app) {
@@ -210,7 +231,11 @@ SDL_AppResult SDL_AppIterate(void *appstate) {
         SDL_GetWindowSize(app->Window, &windowWidth, &windowHeight);
 
         char rawText[6]; // +xx.x\0
-        SDL_snprintf(rawText, sizeof(rawText), "+%.1f", app->TrueEval.Eval);
+        if (app->IsCheckmate) {
+            SDL_snprintf(rawText, sizeof(rawText), "M%i", app->CheckmateMoves);
+        } else {
+            SDL_snprintf(rawText, sizeof(rawText), "+%.1f", app->TrueEval.Eval);
+        }
         TTF_Text *text = TTF_CreateText(app->TextEngine, app->RegularFont, rawText , 0);
         TTF_SetTextColor(text, BLACK.r, BLACK.g, BLACK.g, BLACK.a);
         int textWidth;
@@ -226,7 +251,11 @@ SDL_AppResult SDL_AppIterate(void *appstate) {
         SDL_GetWindowSize(app->Window, &windowWidth, &windowHeight);
 
         char rawText[6]; // -xx.x\0
-        SDL_snprintf(rawText, sizeof(rawText), "%.1f", app->TrueEval.Eval);
+        if (app->IsCheckmate) {
+            SDL_snprintf(rawText, sizeof(rawText), "M%i", app->CheckmateMoves);
+        } else {
+            SDL_snprintf(rawText, sizeof(rawText), "%.1f", app->TrueEval.Eval);
+        }
         TTF_Text *text = TTF_CreateText(app->TextEngine, app->RegularFont, rawText , 0);
         TTF_SetTextColor(text, WHITE.r, WHITE.g, WHITE.g, WHITE.a);
         int textWidth;
@@ -296,46 +325,126 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event) {
         } break;
         case SDL_EVENT_KEY_DOWN:
         {
+            // mod keys
+            switch (event->key.scancode) { 
+                case SDL_SCANCODE_LSHIFT:
+                    app->IsBlackModDown = true;
+                    break;
+                case SDL_SCANCODE_RSHIFT:
+                    app->IsWhiteModDown = true;
+                    break;
+            }
+
             switch (event->key.scancode) {
                 case SDL_SCANCODE_1:
-                    ResetAdjustmentTime(app);
-                    SetEval01(app, 0);
+                    if (app->IsWhiteModDown) {
+                        SetCheckmate(app, Side::White, 1);
+                    } else if (app->IsBlackModDown) {
+                        SetCheckmate(app, Side::Black, 1);
+                    } else {
+                        app->IsCheckmate = false;
+                        ResetAdjustmentTime(app);
+                        SetEval01(app, 0);
+                    }
                     break;
                 case SDL_SCANCODE_2:
-                    ResetAdjustmentTime(app);
-                    SetEval01(app, 1.0f/9);
+                    if (app->IsWhiteModDown) {
+                        SetCheckmate(app, Side::White, 2);
+                    } else if (app->IsBlackModDown) {
+                        SetCheckmate(app, Side::Black, 2);
+                    } else {
+                        app->IsCheckmate = false;
+                        ResetAdjustmentTime(app);
+                        SetEval01(app, 1.0f/9);
+                    }
                     break;
                 case SDL_SCANCODE_3:
-                    ResetAdjustmentTime(app);
-                    SetEval01(app, 2.0f/9);
+                    if (app->IsWhiteModDown) {
+                        SetCheckmate(app, Side::White, 3);
+                    } else if (app->IsBlackModDown) {
+                        SetCheckmate(app, Side::Black, 3);
+                    } else {
+                        app->IsCheckmate = false;
+                        ResetAdjustmentTime(app);
+                        SetEval01(app, 2.0f/9);
+                    }
                     break;
                 case SDL_SCANCODE_4:
-                    ResetAdjustmentTime(app);
-                    SetEval01(app, 3.0f/9);
+                    if (app->IsWhiteModDown) {
+                        SetCheckmate(app, Side::White, 4);
+                    } else if (app->IsBlackModDown) {
+                        SetCheckmate(app, Side::Black, 4);
+                    } else {
+                        app->IsCheckmate = false;
+                        ResetAdjustmentTime(app);
+                        SetEval01(app, 3.0f/9);
+                    }
                     break;
                 case SDL_SCANCODE_5:
-                    ResetAdjustmentTime(app);
-                    SetEval01(app, 4.0f/9);
+                    if (app->IsWhiteModDown) {
+                        SetCheckmate(app, Side::White, 5);
+                    } else if (app->IsBlackModDown) {
+                        SetCheckmate(app, Side::Black, 5);
+                    } else {
+                        app->IsCheckmate = false;
+                        ResetAdjustmentTime(app);
+                        SetEval01(app, 4.0f/9);
+                    }
                     break;
                 case SDL_SCANCODE_6:
-                    ResetAdjustmentTime(app);
-                    SetEval01(app, 5.0f/9);
+                    if (app->IsWhiteModDown) {
+                        SetCheckmate(app, Side::White, 6);
+                    } else if (app->IsBlackModDown) {
+                        SetCheckmate(app, Side::Black, 6);
+                    } else {
+                        app->IsCheckmate = false;
+                        ResetAdjustmentTime(app);
+                        SetEval01(app, 5.0f/9);
+                    }
                     break;
                 case SDL_SCANCODE_7:
-                    ResetAdjustmentTime(app);
-                    SetEval01(app, 6.0f/9);
+                    if (app->IsWhiteModDown) {
+                        SetCheckmate(app, Side::White, 7);
+                    } else if (app->IsBlackModDown) {
+                        SetCheckmate(app, Side::Black, 7);
+                    } else {
+                        app->IsCheckmate = false;
+                        ResetAdjustmentTime(app);
+                        SetEval01(app, 6.0f/9);
+                    }
                     break;
                 case SDL_SCANCODE_8:
-                    ResetAdjustmentTime(app);
-                    SetEval01(app, 7.0f/9);
+                    if (app->IsWhiteModDown) {
+                        SetCheckmate(app, Side::White, 8);
+                    } else if (app->IsBlackModDown) {
+                        SetCheckmate(app, Side::Black, 8);
+                    } else {
+                        app->IsCheckmate = false;
+                        ResetAdjustmentTime(app);
+                        SetEval01(app, 7.0f/9);
+                    }
                     break;
                 case SDL_SCANCODE_9:
-                    ResetAdjustmentTime(app);
-                    SetEval01(app, 8.0f/9);
+                    if (app->IsWhiteModDown) {
+                        SetCheckmate(app, Side::White, 9);
+                    } else if (app->IsBlackModDown) {
+                        SetCheckmate(app, Side::Black, 9);
+                    } else {
+                        app->IsCheckmate = false;
+                        ResetAdjustmentTime(app);
+                        SetEval01(app, 8.0f/9);
+                    }
                     break;
                 case SDL_SCANCODE_0:
-                    ResetAdjustmentTime(app);
-                    SetEval01(app, 1);
+                    if (app->IsWhiteModDown) {
+                        SetCheckmate(app, Side::White, 10);
+                    } else if (app->IsBlackModDown) {
+                        SetCheckmate(app, Side::Black, 10);
+                    } else {
+                        app->IsCheckmate = false;
+                        ResetAdjustmentTime(app);
+                        SetEval01(app, 1);
+                    }
                     break;
                 case SDL_SCANCODE_EQUALS:
                     app->CanAdjust = false;
@@ -363,7 +472,19 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event) {
                     break;
                 }
                 default: break;
-            }
+            } break;
+            case SDL_EVENT_KEY_UP:
+            {
+                // mod keys
+                switch (event->key.scancode) { 
+                    case SDL_SCANCODE_LSHIFT:
+                        app->IsBlackModDown = false;
+                        break;
+                    case SDL_SCANCODE_RSHIFT:
+                        app->IsWhiteModDown = false;
+                        break;
+                }
+            } break;
         }
     }
     return SDL_APP_CONTINUE;
