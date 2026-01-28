@@ -1,11 +1,8 @@
-#include "SDL3/SDL_stdinc.h"
-#include <cfloat>
-#include <cstdlib>
-#include <iterator>
 #define SDL_MAIN_USE_CALLBACKS
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_main.h>
 #include <SDL3_ttf/SDL_ttf.h>
+#include <cfloat>
 
 #include <cmath>
 
@@ -41,6 +38,35 @@ struct App {
 };
 
 SDL_HitTestResult SDLCALL WindowHit(SDL_Window *window, const SDL_Point *area, void *data) {
+    int w, h;
+    SDL_GetWindowSize(window, &w, &h);
+
+    if (area->y <= BORDER_SIZE && area->x <= BORDER_SIZE) {
+        return SDL_HITTEST_RESIZE_TOPLEFT;
+    }
+    if (area->y <= BORDER_SIZE && area->x >= w - BORDER_SIZE) {
+        return SDL_HITTEST_RESIZE_TOPRIGHT;
+    }
+    if (area->y >= h - BORDER_SIZE && area->x <= BORDER_SIZE) {
+        return SDL_HITTEST_RESIZE_BOTTOMLEFT;
+    }
+    if (area->y >= h - BORDER_SIZE && area->x >= w - BORDER_SIZE) {
+        return SDL_HITTEST_RESIZE_BOTTOMRIGHT;
+    }
+
+    if (area->y <= BORDER_SIZE) {
+        return SDL_HITTEST_RESIZE_TOP;
+    }
+    if (area->y >= h - BORDER_SIZE) {
+        return SDL_HITTEST_RESIZE_BOTTOM;
+    }
+    if (area->x <= BORDER_SIZE) {
+        return SDL_HITTEST_RESIZE_LEFT;
+    }
+    if (area->x >= w - BORDER_SIZE) {
+        return SDL_HITTEST_RESIZE_RIGHT;
+    }
+
     return SDL_HITTEST_DRAGGABLE;
 }
 
@@ -102,15 +128,23 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char **argv) {
     App* app = (App*)*appstate;
 
     SDL_Log("Creating window and renderer...");
-    SDL_SetHint("SDL_BORDERLESS_RESIZABLE_STYLE", "1");
     if (!SDL_CreateWindowAndRenderer("ces", 100, 600, SDL_WINDOW_RESIZABLE|SDL_WINDOW_BORDERLESS, &app->Window, &app->Renderer)) {
         SDL_LogError(SDL_LOG_CATEGORY_ERROR, "Failed to create window/renderer: %s", SDL_GetError());
         return SDL_APP_FAILURE;
     }
+
     SDL_RaiseWindow(app->Window);
 
-    // If this fails, it doesn't matter; therefore no need to check for failure
-    SDL_SetWindowHitTest(app->Window, WindowHit, app);
+    if (!SDL_SetWindowHitTest(app->Window, WindowHit, app)) {
+        SDL_LogError(SDL_LOG_CATEGORY_ERROR, "Failed to setup custom window handling: %s", SDL_GetError());
+        return SDL_APP_FAILURE;
+    }
+
+    if (!SDL_SetWindowMinimumSize(app->Window, 50, 50)) {
+        SDL_LogError(SDL_LOG_CATEGORY_ERROR, "Failed to set the window\'s minimum size: %s", SDL_GetError());
+        return SDL_APP_FAILURE;
+    }
+    
 
     SDL_Log("Initializing fonts");
     if (!TTF_Init()) {

@@ -13,3 +13,5 @@ constexpr int FONT_SIZE = 20;
 constexpr float MAX_SCORE = 10.0f;
 
 constexpr double MAX_ADJUSTMENT_TIME = 4;
+
+constexpr int BORDER_SIZE = 5;
