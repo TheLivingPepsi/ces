@@ -40,6 +40,10 @@ struct App {
     bool DisplayFPS;
 };
 
+SDL_HitTestResult SDLCALL WindowHit(SDL_Window *window, const SDL_Point *area, void *data) {
+    return SDL_HITTEST_DRAGGABLE;
+}
+
 void CalculateDeltaTime(App *app) {
     u64 currentTicks = SDL_GetTicksNS();
     app->Delta = (currentTicks - app->PreviousTicks) / 1e9;
@@ -98,11 +102,15 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char **argv) {
     App* app = (App*)*appstate;
 
     SDL_Log("Creating window and renderer...");
+    SDL_SetHint("SDL_BORDERLESS_RESIZABLE_STYLE", "1");
     if (!SDL_CreateWindowAndRenderer("ces", 100, 600, SDL_WINDOW_RESIZABLE|SDL_WINDOW_BORDERLESS, &app->Window, &app->Renderer)) {
         SDL_LogError(SDL_LOG_CATEGORY_ERROR, "Failed to create window/renderer: %s", SDL_GetError());
         return SDL_APP_FAILURE;
     }
     SDL_RaiseWindow(app->Window);
+
+    // If this fails, it doesn't matter; therefore no need to check for failure
+    SDL_SetWindowHitTest(app->Window, WindowHit, app);
 
     SDL_Log("Initializing fonts");
     if (!TTF_Init()) {
