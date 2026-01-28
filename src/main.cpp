@@ -108,6 +108,8 @@ void SetCheckmate(App *app, Side side, int moves) {
     } else {
         SetEval01(app, 0);
     }
+
+    app->Speed *= 1.5;
 }
 
 void ResetAdjustmentTime(App *app) {
