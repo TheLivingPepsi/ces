@@ -22,6 +22,9 @@ struct App {
     SDL_Window *SettingsWindow;
     SDL_Renderer *SettingsRenderer;
 
+    SDL_Surface *SettingsBgSurface;
+    SDL_Texture *SettingsBgTexture;
+
     TTF_TextEngine *TextEngine;
     TTF_Font *RegularFont;
     TTF_Font *ItalicFont;
@@ -148,7 +151,6 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char **argv) {
         return SDL_APP_FAILURE;
     }
     
-
     SDL_Log("Initializing fonts");
     if (!TTF_Init()) {
         SDL_LogError(SDL_LOG_CATEGORY_ERROR, "Failed to initialize SDL_TTF: %s", SDL_GetError());
@@ -167,6 +169,13 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char **argv) {
     app->ItalicFont = TTF_OpenFont(FONT_ITALIC_PATH, FONT_SIZE);
     if (app->ItalicFont == nullptr) {
         SDL_LogError(SDL_LOG_CATEGORY_ERROR, "Failed to open font: %s", SDL_GetError());
+        return SDL_APP_FAILURE;
+    }
+
+    SDL_Log("Loading textures...");
+    app->SettingsBgSurface = SDL_LoadPNG(SETTINGS_BG_PATH);
+    if (app->SettingsBgSurface == nullptr) {
+        SDL_LogError(SDL_LOG_CATEGORY_ERROR, "Failed to load texture: %s", SDL_GetError());
         return SDL_APP_FAILURE;
     }
 
@@ -258,6 +267,14 @@ SDL_AppResult SDL_AppIterate(void *appstate) {
 
     SDL_RenderPresent(app->Renderer);
 
+    if (app->SettingsWindow != nullptr) {
+        SDL_RenderClear(app->SettingsRenderer);
+        
+        SDL_RenderTextureTiled(app->SettingsRenderer, app->SettingsBgTexture, nullptr, 1, nullptr);
+
+        SDL_RenderPresent(app->SettingsRenderer);
+    }
+
     return SDL_APP_CONTINUE;
 }
 SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event) {
@@ -336,6 +353,12 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event) {
                     }
                     if (!SDL_CreateWindowAndRenderer("", 600, 400, 0, &app->SettingsWindow, &app->SettingsRenderer)) {
                         SDL_LogError(SDL_LOG_CATEGORY_ERROR, "Failed to create window/renderer: %s", SDL_GetError());
+                    }
+
+                    app->SettingsBgTexture = SDL_CreateTextureFromSurface(app->SettingsRenderer, app->SettingsBgSurface);
+                    if (app->SettingsBgTexture == nullptr) {
+                        SDL_LogError(SDL_LOG_CATEGORY_ERROR, "Failed to initialize resources for settings window: %s", SDL_GetError());
+                        return SDL_APP_FAILURE;
                     }
                     break;
                 }
