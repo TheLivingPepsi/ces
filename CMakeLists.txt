@@ -54,7 +54,6 @@ else()
     -Weffc++
     -Wconversion
     -Wsign-conversion
-    -Wimplicit-int-float-conversion
   )
 endif()
 
