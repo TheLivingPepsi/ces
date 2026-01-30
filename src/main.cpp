@@ -87,7 +87,7 @@ SDL_HitTestResult SDLCALL WindowHit(SDL_Window *window, const SDL_Point *area, v
 
 void CalculateDeltaTime(App *app) {
     u64 currentTicks = SDL_GetTicksNS();
-    app->Delta = (currentTicks - app->PreviousTicks) / 1e9f;
+    app->Delta = (float)(currentTicks - app->PreviousTicks) / 1e9f;
     app->PreviousTicks = currentTicks;
 }
 
@@ -255,7 +255,7 @@ SDL_AppResult SDL_AppIterate(void *appstate) {
         int textWidth;
         TTF_MeasureString(app->RegularFont, rawText, 0, 0, &textWidth, nullptr);
         float x = ((float)windowWidth / 2)-((float)textWidth / 2);
-        float y = windowHeight - FONT_SIZE - 10;
+        float y = (float)(windowHeight - FONT_SIZE - 10);
         if (!TTF_DrawRendererText(text, x, y)) {
             SDL_Log("%s", SDL_GetError());
         }
@@ -294,7 +294,7 @@ SDL_AppResult SDL_AppIterate(void *appstate) {
         TTF_MeasureString(app->ItalicFont, rawText, 0, 0, &textWidth, nullptr);
 
         float padding = 10.0f;
-        float w = textWidth + padding;
+        float w = (float)textWidth + padding;
         float h = FONT_SIZE + padding;
 
         int windowWidth, windowHeight;
