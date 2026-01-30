@@ -12,7 +12,7 @@ constexpr const char* FONT_ITALIC_PATH = "asset/font/Zalando_Sans_Expanded/Zalan
 constexpr int FONT_SIZE = 20;
 constexpr float MAX_SCORE = 10.0f;
 
-constexpr double MAX_ADJUSTMENT_TIME = 4;
+constexpr float MAX_ADJUSTMENT_TIME = 4;
 
 constexpr int BORDER_SIZE = 10;
 

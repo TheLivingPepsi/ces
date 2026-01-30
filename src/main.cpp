@@ -27,7 +27,7 @@ struct App {
     TTF_Font *RegularFont;
     TTF_Font *ItalicFont;
 
-    double Delta;
+    float Delta;
     u64 PreviousTicks;
 
     Eval TrueEval;
@@ -36,8 +36,8 @@ struct App {
     int CheckmateMoves;
     float Speed;
 
-    double TimeSinceLastPress;
-    double AdjustmentTimer;
+    float TimeSinceLastPress;
+    float AdjustmentTimer;
     bool CanAdjust;
 
     bool IsWhiteModDown;
@@ -52,6 +52,7 @@ enum Side {
 };
 
 SDL_HitTestResult SDLCALL WindowHit(SDL_Window *window, const SDL_Point *area, void *data) {
+    (void) data;
     int w, h;
     SDL_GetWindowSize(window, &w, &h);
 
@@ -86,7 +87,7 @@ SDL_HitTestResult SDLCALL WindowHit(SDL_Window *window, const SDL_Point *area, v
 
 void CalculateDeltaTime(App *app) {
     u64 currentTicks = SDL_GetTicksNS();
-    app->Delta = (currentTicks - app->PreviousTicks) / 1e9;
+    app->Delta = (currentTicks - app->PreviousTicks) / 1e9f;
     app->PreviousTicks = currentTicks;
 }
 
@@ -107,7 +108,7 @@ void SetCheckmate(App *app, Side side, int moves) {
         SetEval01(app, 0);
     }
 
-    app->Speed *= 1.5;
+    app->Speed *= 1.5f;
 }
 
 void ResetAdjustmentTime(App *app) {
@@ -127,13 +128,16 @@ void HandleAdjustment(App *app) {
     if (app->TimeSinceLastPress >= MAX_ADJUSTMENT_TIME) return;
     if (app->AdjustmentTimer <= 0) {
         float factor = ((MAX_ADJUSTMENT_TIME - app->TimeSinceLastPress) / MAX_ADJUSTMENT_TIME);
-        SetEval01(app, app->TrueEval.Eval01 + ((SDL_randf() * 2) - 1) * SDL_pow(factor, 1.5f) * 0.05f);
+        SetEval01(app, app->TrueEval.Eval01 + ((SDL_randf() * 2) - 1) * SDL_powf(factor, 1.5f) * 0.05f);
         float nextTime = SDL_min(app->TimeSinceLastPress * SDL_randf(), 0.75f);
         app->AdjustmentTimer = nextTime;
     }
 }
 
 SDL_AppResult SDL_AppInit(void **appstate, int argc, char **argv) {
+    (void) argc;
+    (void) argv;
+
     SDL_Log("Initializing SDL...");
     if (!SDL_Init(SDL_INIT_VIDEO)) {
         SDL_LogError(SDL_LOG_CATEGORY_ERROR, "Failed to initialize SDL: %s", SDL_GetError());
@@ -347,6 +351,7 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event) {
                 case SDL_SCANCODE_RSHIFT:
                     app->IsWhiteModDown = true;
                     break;
+                default: break;
             }
 
             switch (event->key.scancode) {
@@ -498,10 +503,14 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event) {
                     case SDL_SCANCODE_RSHIFT:
                         app->IsWhiteModDown = false;
                         break;
+                    default: break;
                 }
             } break;
         }
     }
     return SDL_APP_CONTINUE;
 }
-void SDL_AppQuit(void *appstate, SDL_AppResult result) {}
+void SDL_AppQuit(void *appstate, SDL_AppResult result) {
+    (void) appstate;
+    (void) result;
+}
