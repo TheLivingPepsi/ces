@@ -1,3 +1,5 @@
+#include "SDL3/SDL_init.h"
+#include "SDL3/SDL_scancode.h"
 #include "SDL3/SDL_video.h"
 #define SDL_MAIN_USE_CALLBACKS
 #include <SDL3/SDL.h>
@@ -342,18 +344,16 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event) {
         } break;
         case SDL_EVENT_KEY_DOWN:
         {
-            // mod keys
             switch (event->key.scancode) { 
+                // mod keys
                 case SDL_SCANCODE_LSHIFT:
                     app->IsBlackModDown = true;
                     break;
                 case SDL_SCANCODE_RSHIFT:
                     app->IsWhiteModDown = true;
                     break;
-                default: break;
-            }
 
-            switch (event->key.scancode) {
+                    // num keys
                 case SDL_SCANCODE_1:
                     if (app->IsWhiteModDown) {
                         SetCheckmate(app, Side::White, 1);
@@ -472,24 +472,27 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event) {
                 case SDL_SCANCODE_F: 
                     app->DisplayFPS = !app->DisplayFPS;
                     break;
+                case SDL_SCANCODE_ESCAPE:
+                case SDL_SCANCODE_Q:
+                    return SDL_APP_SUCCESS;
                 case SDL_SCANCODE_SLASH:
-                {
-                    if (app->SettingsWindow != nullptr || app->SettingsRenderer != nullptr) {
-                        SDL_Log("Settings window is already active, focusing settings...");
-                        SDL_RaiseWindow(app->SettingsWindow);
+                    {
+                        if (app->SettingsWindow != nullptr || app->SettingsRenderer != nullptr) {
+                            SDL_Log("Settings window is already active, focusing settings...");
+                            SDL_RaiseWindow(app->SettingsWindow);
+                            break;
+                        }
+                        if (!SDL_CreateWindowAndRenderer("", 600, 400, 0, &app->SettingsWindow, &app->SettingsRenderer)) {
+                            SDL_LogError(SDL_LOG_CATEGORY_ERROR, "Failed to create window/renderer: %s", SDL_GetError());
+                        }
+
+                        app->SettingsBgTexture = SDL_CreateTextureFromSurface(app->SettingsRenderer, app->SettingsBgSurface);
+                        if (app->SettingsBgTexture == nullptr) {
+                            SDL_LogError(SDL_LOG_CATEGORY_ERROR, "Failed to initialize resources for settings window: %s", SDL_GetError());
+                            return SDL_APP_FAILURE;
+                        }
                         break;
                     }
-                    if (!SDL_CreateWindowAndRenderer("", 600, 400, 0, &app->SettingsWindow, &app->SettingsRenderer)) {
-                        SDL_LogError(SDL_LOG_CATEGORY_ERROR, "Failed to create window/renderer: %s", SDL_GetError());
-                    }
-
-                    app->SettingsBgTexture = SDL_CreateTextureFromSurface(app->SettingsRenderer, app->SettingsBgSurface);
-                    if (app->SettingsBgTexture == nullptr) {
-                        SDL_LogError(SDL_LOG_CATEGORY_ERROR, "Failed to initialize resources for settings window: %s", SDL_GetError());
-                        return SDL_APP_FAILURE;
-                    }
-                    break;
-                }
                 default: break;
             } break;
             case SDL_EVENT_KEY_UP:
