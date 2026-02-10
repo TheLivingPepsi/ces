@@ -87,7 +87,7 @@ SDL_HitTestResult SDLCALL WindowHit(SDL_Window *window, const SDL_Point *area, v
 
 void CalculateDeltaTime(App *app) {
     u64 currentTicks = SDL_GetTicksNS();
-    app->Delta = (currentTicks - app->PreviousTicks) / 1e9f;
+    app->Delta = (float)(currentTicks - app->PreviousTicks) / 1e9f;
     app->PreviousTicks = currentTicks;
 }
 
@@ -230,14 +230,14 @@ SDL_AppResult SDL_AppIterate(void *appstate) {
     SDL_RenderClear(app->Renderer);
 
     SDL_SetRenderDrawColor(app->Renderer, WHITE.r, WHITE.g, WHITE.b, WHITE.a);
-    int windowWidth, windowHeight;
+    int windowWidth;
+    int windowHeight;
     SDL_GetWindowSize(app->Window, &windowWidth, &windowHeight);
-    float y = Lerp((float)windowHeight, 0, app->AnimatedEval.Eval01);
-    SDL_FRect white { 0,y,(float)windowWidth,(float)windowHeight };
+    float barY = Lerp((float)windowHeight, 0, app->AnimatedEval.Eval01);
+    SDL_FRect white { 0, barY, (float)windowWidth,(float)windowHeight };
     SDL_RenderFillRect(app->Renderer, &white);
 
     if (app->TrueEval.Eval01 >= 0.5f) {
-        int windowWidth, windowHeight;
         SDL_GetWindowSize(app->Window, &windowWidth, &windowHeight);
 
         char rawText[6]; // +xx.x\0
@@ -255,13 +255,12 @@ SDL_AppResult SDL_AppIterate(void *appstate) {
         int textWidth;
         TTF_MeasureString(app->RegularFont, rawText, 0, 0, &textWidth, nullptr);
         float x = ((float)windowWidth / 2)-((float)textWidth / 2);
-        float y = windowHeight - FONT_SIZE - 10;
+        float y = (float)windowHeight - FONT_SIZE - 10;
         if (!TTF_DrawRendererText(text, x, y)) {
             SDL_Log("%s", SDL_GetError());
         }
         TTF_DestroyText(text);
     } else {
-        int windowWidth, windowHeight;
         SDL_GetWindowSize(app->Window, &windowWidth, &windowHeight);
 
         char rawText[6]; // -xx.x\0
@@ -294,10 +293,9 @@ SDL_AppResult SDL_AppIterate(void *appstate) {
         TTF_MeasureString(app->ItalicFont, rawText, 0, 0, &textWidth, nullptr);
 
         float padding = 10.0f;
-        float w = textWidth + padding;
+        float w = (float)textWidth + padding;
         float h = FONT_SIZE + padding;
 
-        int windowWidth, windowHeight;
         SDL_GetWindowSize(app->Window, &windowWidth, &windowHeight);
 
         float centerX = (float)windowWidth/2;
